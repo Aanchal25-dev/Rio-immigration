@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+{% block main %}
+
+<div class="page-header">
+    <div class="page-header-left d-flex align-items-center">
+        <div class="page-header-title">
+            <h5 class="m-b-10">Add Expense</h5>
+        </div>
+        <ul class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">Home</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'accounting_expenses' %}">Expenses</a></li>
+            <li class="breadcrumb-item">Add</li>
+        </ul>
+    </div>
+    <div class="page-header-right ms-auto">
+        <a href="{% url 'accounting_expenses' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+</div>
+
+<div class="main-content">
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Expense Information</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Expense Date <span class="text-danger">*</span></label>
+                                <input type="date" name="expense_date" class="form-control" value="{{ today|date:'Y-m-d' }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Vendor <span class="text-danger">*</span></label>
+                                <input type="text" name="vendor" class="form-control" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Description <span class="text-danger">*</span></label>
+                            <textarea name="description" class="form-control" rows="3" required></textarea>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Amount <span class="text-danger">*</span></label>
+                                <input type="number" id="amount_input" name="amount" class="form-control" step="0.01" min="0.01" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Tax Type</label>
+                                <select id="tax_type" name="tax_type" class="form-select">
+                                    <option value="exclusive">Inclusive of Tax</option>
+                                    <option value="inclusive">Exclusive of Tax</option>
+                                    <option value="out_of_scope" selected>Out of Scope of Tax</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4" id="hst_rate_col">
+                                <label class="form-label">HST Rate (%)</label>
+                                <input type="number" id="hst_rate" name="hst_rate" class="form-control" value="13" step="0.01" min="0" max="100">
+                            </div>
+                        </div>
+
+                        <div id="tax_breakdown" class="row mb-3" style="display:none;">
+                            <div class="col-12">
+                                <div class="card bg-light border-0">
+                                    <div class="card-body py-2 px-3">
+                                        <div class="row text-center">
+                                            <div class="col-md-4">
+                                                <small class="text-muted d-block">Subtotal (Before Tax)</small>
+                                                <strong id="display_subtotal" class="text-dark">$0.00</strong>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <small class="text-muted d-block" id="tax_rate_label">HST (13%)</small>
+                                                <strong id="display_tax" class="text-warning">$0.00</strong>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <small class="text-muted d-block">Total</small>
+                                                <strong id="display_total" class="text-success">$0.00</strong>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <input type="hidden" name="tax_amount" id="hidden_tax_amount" value="0.00">
+                        <input type="hidden" name="subtotal" id="hidden_subtotal" value="0.00">
+                        <input type="hidden" name="total_amount" id="hidden_total_amount" value="0.00">
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Category</label>
+                                <select name="category" class="form-select select2">
+                                    <option value="">Select Category</option>
+                                    {% for account in accounts %}
+                                    <option value="{{ account.id }}">{{ account.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Account</label>
+                                <select name="account" class="form-select select2">
+                                    <option value="">Select Account</option>
+                                    {% for account in accounts %}
+                                    <option value="{{ account.id }}">{{ account.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Payment Method</label>
+                                <select name="payment_method" class="form-select">
+                                    <option value="cash">Cash</option>
+                                    <option value="check">Check</option>
+                                    <option value="credit_card">Credit Card</option>
+                                    <option value="debit_card">Debit Card</option>
+                                    <option value="bank_transfer">Bank Transfer</option>
+                                    <option value="online">Online Payment</option>
+                                    <option value="e_transfer">E-Transfer</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Payment Status</label>
+                                <select name="payment_status" class="form-select">
+                                    <option value="unpaid">Unpaid</option>
+                                    <option value="paid">Paid</option>
+                                    <option value="partial">Partially Paid</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Reference Number</label>
+                            <input type="text" name="reference_number" class="form-control">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Receipt (Optional)</label>
+                            <input type="file" name="receipt" class="form-control" accept="image/*,.pdf">
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <button type="submit" class="btn btn-primary w-100">Create Expense</button>
+                            </div>
+                            <div class="col-md-6">
+                                <a href="{% url 'accounting_expenses' %}" class="btn btn-secondary w-100">Cancel</a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block script %}
+<script>
+    function calculateTax() {
+        const amount = parseFloat(document.getElementById('amount_input').value) || 0;
+        const taxType = document.getElementById('tax_type').value;
+        const hstRate = (parseFloat(document.getElementById('hst_rate').value) || 0) / 100;
+        const breakdown = document.getElementById('tax_breakdown');
+        const hstCol = document.getElementById('hst_rate_col');
+
+        // Show/hide HST rate field
+        hstCol.style.display = (taxType === 'out_of_scope') ? 'none' : '';
+
+        let subtotal = 0, tax = 0, total = 0;
+
+        if (taxType === 'exclusive') {
+            // Amount already includes tax — back-calculate subtotal
+            total = amount;
+            subtotal = amount / (1 + hstRate);
+            tax = total - subtotal;
+        } else if (taxType === 'inclusive') {
+            // Add tax on top of amount
+            subtotal = amount;
+            tax = amount * hstRate;
+            total = subtotal + tax;
+        } else {
+            // Out of scope — no tax
+            subtotal = amount;
+            tax = 0;
+            total = amount;
+        }
+
+        const showBreakdown = (taxType !== 'out_of_scope') && amount > 0;
+        breakdown.style.display = showBreakdown ? '' : 'none';
+
+        const rateLabel = ((hstRate * 100).toFixed(2).replace(/\.?0+$/, ''));
+        document.getElementById('display_subtotal').textContent = '$' + subtotal.toFixed(2);
+        document.getElementById('display_tax').textContent = '$' + tax.toFixed(2);
+        document.getElementById('display_total').textContent = '$' + total.toFixed(2);
+        document.getElementById('tax_rate_label').textContent = 'HST (' + rateLabel + '%)';
+
+        document.getElementById('hidden_subtotal').value = subtotal.toFixed(2);
+        document.getElementById('hidden_tax_amount').value = tax.toFixed(2);
+        document.getElementById('hidden_total_amount').value = total.toFixed(2);
+    }
+
+    $(document).ready(function() {
+        $('.select2').select2({
+            width: '100%',
+            theme: 'bootstrap-5'
+        });
+
+        // Trigger on page load to set initial visibility
+        calculateTax();
+
+        document.getElementById('amount_input').addEventListener('input', calculateTax);
+        document.getElementById('tax_type').addEventListener('change', calculateTax);
+        document.getElementById('hst_rate').addEventListener('input', calculateTax);
+    });
+</script>
+{% endblock %}
+
